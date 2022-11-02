@@ -364,33 +364,101 @@ void getCusrorPosition(struct coords* pos, int* stop, int size, struct celule** 
     }
 }
 
-int main() {
-    srand(time(NULL));
+int loose(struct celule** mat, int size) { //perdu
+    for(int i=0;i<size;i++) {
+        for(int j=0;j<size;j++) {
+            if (mat[i][j].isBomb == 1 && mat[i][j].isRevealed == 1) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+int win(struct celule** mat, int size, int nbBomb) { //gagné
+    int count = 0;
+    for(int i=0;i<size;i++) {
+        for(int j=0;j<size;j++) {
+            if (mat[i][j].isRevealed == 1 && mat[i][j].isBomb == 0) {
+                count++;
+            }
+        }
+    }
+    if (count == size*size - nbBomb) {
+        return 1;
+    }
+}
+
+int main(int argc, char const *argv[]) {
+    //gérer les parametres
     int size = 20;
-    int stop=0;
     int nbBombs = 50;
+    if (argc > 1 && argc != 3) {
+        printf("Utilisation : ./demineur [taille_grille] [nombre_bombes]");
+    } else if (argc == 3) {
+        size = atoi(argv[1]);
+        nbBombs = atoi(argv[2]);
+        printf("Jeux sur une grille de %d cases avec %d bombes\n", size, nbBombs);
+    }
+
+
+    //initialisations du début
+    srand(time(NULL));
+    int stop=0;
     struct coords pos = {0, 0};
+
+    //initialisation de la matrice
     struct celule ** mat = initMat(size);
     if (mat == NULL) {
         printf("Erreur d'allocation de la matrice");
         return 1;
     }
+
+    //initialisation de chaques cellules
     printf("\e[1;1H\e[2J");
     setNeighbours(mat, size);
     setBombs(mat, size, nbBombs);
     setCount(mat, size);
+
+    //découverte du début
+    int x,y;
+    int init_done=0;
+    while (init_done == 0) {
+        x = rand() % size;
+        y = rand() % size;
+        if (mat[x][y].count != 0) {
+            continue;
+        } else {
+            discover(mat, size, x, y);
+            init_done = 1;
+        }
+    }
+
+    //boucle principale
     while (stop == 0) {
-        up(size+6);
+        up(size+6); //on remonte le curseur pour ne pas effacer le terminal
         printf("Contrôles:\n flèches pour se déplacer,   \na pour découvrir une case, \ne pour marquer une case,\nr pour quitter\n");
         printf("Position du curseur   x: %d, y: %d, %d Bombes   \n", pos.x, pos.y, nbBombs);
-        printPlayerMat(mat, size, pos);
-        getCusrorPosition(&pos, &stop, size, mat);
-
+        printPlayerMat(mat, size, pos); //affichage de la matrice
+        getCusrorPosition(&pos, &stop, size, mat); //recuperation de la position du curseur
+        if (loose(mat, size) == 1) { //perdu
+            printf("Vous avez perdu !\n");
+            stop = 1;
+        } else if (win(mat, size, nbBombs) == 1) { //gagné
+            printf("Vous avez gagné !\n");
+            stop = 1;
+        }
     }
+
+    // afficher la matrice complète
+    up(size+1);
+    printMatCheat(mat, size);
+
     //liberer les tableaux
     for (int i = 0; i < size; i++) {
         free(mat[i]);
     }
     free(mat);
+    printf("\n\n");
     return 0;
 }
