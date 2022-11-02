@@ -2,6 +2,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
+#include <curses.h>
+#include <termios.h>
+#include <string.h>
+
 
 void up(int lines) { //remonter de x lignes dans la console
     for(int i=0;i<lines;i++) {
@@ -9,9 +14,38 @@ void up(int lines) { //remonter de x lignes dans la console
     }
 }
 
-void clear() { //effacer la console
-    printf("\033[2J");
+void printcolor(int fg, int bg) { //affichage de la couleur
+    printf("\033[%d;%dm", fg, bg);
 }
+
+struct colors {
+    char *red;
+    char *green;
+    char *yellow;
+    char *blue;
+    char *magenta;
+    char *cyan;
+    char *white;
+    char *reset;
+    char *clear;
+};
+
+struct colors textcolor = {
+    .red = "\033[31m",
+    .green = "\033[32m",
+    .yellow = "\033[33m",
+    .blue = "\033[34m",
+    .magenta = "\033[35m",
+    .cyan = "\033[36m",
+    .white = "\033[37m",
+    .reset = "\033[0m",
+    .clear = "\033[2J"
+};
+
+struct coords {
+    int x;
+    int y;
+};
 
 struct neighbour { //structure pour les voisins d'une case
     /* U = up, D = down, l = left, r = right
@@ -31,11 +65,13 @@ struct neighbour { //structure pour les voisins d'une case
 } ;
 
 struct celule { //la structure de chaque case du jeux
-    int x; // position x
-    int y; // position y
+    struct coords coord;
     int isBomb; // définit si la case est une bombe (0=Faux, 1=Vrai)
     int count; // nombres de mines a proximité
     struct neighbour voisins; // les voisins de la case 
+    int isRevealed; // définit si la case est révélée (0=Faux, 1=Vrai)
+    int isFlagged; // définit si la case est marquée (0=Faux, 1=Vrai)
+    int isSelected; // définit si la case est selectionnée (0=Faux, 1=Vrai)
 } ;
 
 struct celule ** initMat(int size) { //initialisation de la matrice
@@ -53,8 +89,8 @@ struct celule ** initMat(int size) { //initialisation de la matrice
     }
     for(int i=0;i<size;i++) { //initialisation des cases
         for(int j=0;j<size;j++) {
-            mat[i][j].x = i;
-            mat[i][j].y = j;
+            mat[i][j].coord.x = i;
+            mat[i][j].coord.y = j;
             mat[i][j].isBomb = 0;
             mat[i][j].count = 0;
             mat[i][j].voisins.U = NULL;
@@ -65,6 +101,8 @@ struct celule ** initMat(int size) { //initialisation de la matrice
             mat[i][j].voisins.DR = NULL;
             mat[i][j].voisins.R = NULL;
             mat[i][j].voisins.UR = NULL;
+            mat[i][j].isRevealed = 0;
+            mat[i][j].isFlagged = 0;
         }
     }
     return mat;
@@ -116,6 +154,7 @@ void setBombs(struct celule ** mat, int size, int nbBombs) { //définition des b
         y = rand() % size;
         if (mat[x][y].isBomb == 0) {
             mat[x][y].isBomb = 1;
+            mat[x][y].count = 9;
         } else {
             i--;
         }
@@ -155,22 +194,163 @@ void setCount(struct celule ** mat, int size) { //définition du nombre de bombe
     }
 }
 
-void printMatCheat(struct celule ** mat, int size) { //affichage de la matrice avec compte et bombes
+void printMatCheat(struct celule ** mat, int size) { //affichage de la matrice
     for(int i=0;i<size;i++) {
         for(int j=0;j<size;j++) {
             if (mat[i][j].isBomb == 1) {
+                printcolor(30, 41);
                 printf("B ");
             } else {
-                printf("%d ", mat[i][j].count);
+                if (mat[i][j].count == 0) {
+                    printcolor(30, 40);
+                    printf("  ");
+                } else if (mat[i][j].count == 1) {
+                    printcolor(34, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 2) {
+                    printcolor(32, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 3) {
+                    printcolor(31, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 4) {
+                    printcolor(34, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 5) {
+                    printcolor(31, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 6) {
+                    printcolor(34, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 7) {
+                    printcolor(31, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 8) {
+                    printcolor(34, 40);
+                    printf("%d ", mat[i][j].count);
+                }
             }
         }
+        printcolor(0, 0);
         printf("\n");
     }
 }
 
-int main(int argc, char * argv[]) {
-    int size = 20; // taille de la matrice
-    int nbBombs = 50; // nombre de bombes
+void printPlayerMat(struct celule ** mat, int size) { //affichage de la matrice
+    for(int i=0;i<size;i++) {
+        for(int j=0;j<size;j++) {
+            if (mat[i][j].isBomb == 1 && mat[i][j].isRevealed == 1) {
+                printcolor(30, 41);
+                printf("B ");
+            } else if (mat[i][j].isRevealed == 1) {
+                if (mat[i][j].count == 0) {
+                    printcolor(30, 40);
+                    printf("  ");
+                } else if (mat[i][j].count == 1) {
+                    printcolor(34, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 2) {
+                    printcolor(32, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 3) {
+                    printcolor(31, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 4) {
+                    printcolor(34, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 5) {
+                    printcolor(31, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 6) {
+                    printcolor(34, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 7) {
+                    printcolor(31, 40);
+                    printf("%d ", mat[i][j].count);
+                } else if (mat[i][j].count == 8) {
+                    printcolor(34, 40);
+                    printf("%d ", mat[i][j].count);
+                }
+            } else {
+                printcolor(30, 47);
+                printf("  ");
+            }
+        }
+        printcolor(0, 0);
+        printf("\n");
+    }
+}
+
+void discover(struct celule ** mat, int size, int x, int y) { //découverte des cases
+    if (mat[x][y].isRevealed == 0) {
+        mat[x][y].isRevealed = 1;
+        if (mat[x][y].count == 0) {
+            if (mat[x][y].voisins.U != NULL && mat[x][y].voisins.U->isRevealed == 0) {
+                discover(mat, size, x-1, y);
+            }
+            if (mat[x][y].voisins.UL != NULL && mat[x][y].voisins.UL->isRevealed == 0) {
+                discover(mat, size, x-1, y-1);
+            }
+            if (mat[x][y].voisins.L != NULL && mat[x][y].voisins.L->isRevealed == 0) {
+                discover(mat, size, x, y-1);
+            }
+            if (mat[x][y].voisins.DL != NULL && mat[x][y].voisins.DL->isRevealed == 0) {
+                discover(mat, size, x+1, y-1);
+            }
+            if (mat[x][y].voisins.D != NULL && mat[x][y].voisins.D->isRevealed == 0) {
+                discover(mat, size, x+1, y);
+            }
+            if (mat[x][y].voisins.DR != NULL && mat[x][y].voisins.DR->isRevealed == 0) {
+                discover(mat, size, x+1, y+1);
+            }
+            if (mat[x][y].voisins.R != NULL && mat[x][y].voisins.R->isRevealed == 0) {
+                discover(mat, size, x, y+1);
+            }
+            if (mat[x][y].voisins.UR != NULL && mat[x][y].voisins.UR->isRevealed == 0) {
+                discover(mat, size, x-1, y+1);
+            }
+        }
+    }
+}
+
+char getTerlinalKeyPress() { //detection des touches
+    char c;
+    struct termios oldattr, newattr;
+    tcgetattr( STDIN_FILENO, &oldattr );
+    newattr = oldattr;
+    newattr.c_lflag &= ~( ICANON | ECHO );
+    tcsetattr( STDIN_FILENO, TCSANOW, &newattr );
+    c = getchar();
+    tcsetattr( STDIN_FILENO, TCSANOW, &oldattr );
+    return c;
+}
+
+void changeCusrorPosition(struct coords* pos, int* stop, int size) { //recuperation de la position du curseur
+    char c;
+    c = getTerlinalKeyPress();
+
+    if (c == 'z' && pos->x > 0) {
+        pos->x--;
+    } else if (c == 's' && pos->x < size-1) {
+        pos->x++;
+    } else if (c == 'q' && pos->y > 0) {
+        pos->y--;
+    } else if (c == 'd' && pos->y < size-1) {
+        pos->y++;
+    } else if (c == ' ') {
+        printf("space");
+    } else if (c == 'r') {
+        printf("Libération de la mémoire...\n");
+        *stop = 1;
+    }
+}
+
+int main() {
+    srand(time(NULL));
+    int size = 20;
+    int stop=0;
+    int nbBombs = 50;
+    struct coords pos = {0, 0};
     struct celule ** mat = initMat(size);
     if (mat == NULL) {
         printf("Erreur d'allocation de la matrice");
@@ -179,6 +359,16 @@ int main(int argc, char * argv[]) {
     setNeighbours(mat, size);
     setBombs(mat, size, nbBombs);
     setCount(mat, size);
-    printMatCheat(mat, size);
+    while (stop == 0) {
+        printf("\e[1;1H\e[2J");
+        printf("x = %d, y = %d\n", pos.x, pos.y);
+        printPlayerMat(mat, size);
+        changeCusrorPosition(&pos, &stop, size);
+    }
+    //liberer les tableaux
+    for (int i = 0; i < size; i++) {
+        free(mat[i]);
+    }
+    free(mat);
     return 0;
 }
