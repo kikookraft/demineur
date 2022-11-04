@@ -200,35 +200,34 @@ void printMatCheat(struct celule ** mat, int size) { //affichage de la matrice
             if (mat[i][j].isBomb == 1) {
                 printcolor(30, 41);
                 printf("💣");
-            } else {
-                if (mat[i][j].count == 0) {
-                    printcolor(30, 40);
-                    printf("  ");
-                } else if (mat[i][j].count == 1) {
-                    printcolor(34, 40);
-                    printf("%d ", mat[i][j].count);
-                } else if (mat[i][j].count == 2) {
-                    printcolor(32, 40);
-                    printf("%d ", mat[i][j].count);
-                } else if (mat[i][j].count == 3) {
-                    printcolor(31, 40);
-                    printf("%d ", mat[i][j].count);
-                } else if (mat[i][j].count == 4) {
-                    printcolor(34, 40);
-                    printf("%d ", mat[i][j].count);
-                } else if (mat[i][j].count == 5) {
-                    printcolor(31, 40);
-                    printf("%d ", mat[i][j].count);
-                } else if (mat[i][j].count == 6) {
-                    printcolor(34, 40);
-                    printf("%d ", mat[i][j].count);
-                } else if (mat[i][j].count == 7) {
-                    printcolor(31, 40);
-                    printf("%d ", mat[i][j].count);
-                } else if (mat[i][j].count == 8) {
-                    printcolor(34, 40);
-                    printf("%d ", mat[i][j].count);
+            } else if (mat[i][j].isRevealed == 1) {
+                int color1 = 30;
+                int color2 = 40;
+                switch (mat[i][j].count) { //couleur des chiffres
+                    case 0:
+                        color1 = 30;
+                        break;
+                    case 1:
+                        color1 = 34;
+                        break;
+                    case 2:
+                        color1 = 32;
+                        break;
+                    case 3:
+                        color1 = 31;
+                        break;
+                    default:
+                        color1 = 31;
+                        break;
                 }
+                printcolor(color1, color2);
+                printf("%d ", mat[i][j].count);
+            } else if (mat[i][j].isFlagged == 1) {
+                printcolor(30, 44);
+                printf("🚩");
+            } else {
+                printcolor(30, 47);
+                printf("  ");
             }
         }
         printcolor(0, 0);
@@ -239,10 +238,7 @@ void printMatCheat(struct celule ** mat, int size) { //affichage de la matrice
 void printPlayerMat(struct celule ** mat, int size, struct coords pos) { //affichage de la matrice
     for(int i=0;i<size;i++) {
         for(int j=0;j<size;j++) {
-            if (mat[i][j].isBomb == 1 && mat[i][j].isRevealed == 1) {
-                printcolor(30, 41);
-                printf("X ");
-            } else if (mat[i][j].isRevealed == 1) {
+            if (mat[i][j].isRevealed == 1) {
                 int color1 = 30;
                 int color2 = 40;
                 if (i == pos.x && j == pos.y) {
@@ -261,30 +257,15 @@ void printPlayerMat(struct celule ** mat, int size, struct coords pos) { //affic
                     case 3:
                         color1 = 31;
                         break;
-                    case 4:
-                        color1 = 34;
-                        break;
-                    case 5:
-                        color1 = 31;
-                        break;
-                    case 6:
-                        color1 = 34;
-                        break;
-                    case 7:
-                        color1 = 31;
-                        break;
-                    case 8:
-                        color1 = 34;
-                        break;
                     default:
-                        color1 = 30;
+                        color1 = 31;
                         break;
                 }
                 printcolor(color1, color2);
                 printf("%d ", mat[i][j].count);
             } else if (mat[i][j].isFlagged == 1) {
                 printcolor(30, 44);
-                printf("⚑ ");
+                printf("🚩");
             } else if (i == pos.x && j == pos.y) {
                     printcolor(30, 43);
                     printf("  ");
@@ -360,7 +341,6 @@ void getCusrorPosition(struct coords* pos, int* stop, int size, struct celule** 
     } else if (c == 'e') { //flag
         mat[pos->x][pos->y].isFlagged = !mat[pos->x][pos->y].isFlagged;
     } else if (c == 'r') { //quit
-        printf("Libération de la mémoire...\n");
         *stop = 1;
     }
 }
