@@ -1,4 +1,4 @@
-#include "mat.h"
+//#include "mat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -199,7 +199,7 @@ void printMatCheat(struct celule ** mat, int size) { //affichage de la matrice
         for(int j=0;j<size;j++) {
             if (mat[i][j].isBomb == 1) {
                 printcolor(30, 41);
-                printf("B ");
+                printf("💣");
             } else {
                 if (mat[i][j].count == 0) {
                     printcolor(30, 40);
@@ -241,7 +241,7 @@ void printPlayerMat(struct celule ** mat, int size, struct coords pos) { //affic
         for(int j=0;j<size;j++) {
             if (mat[i][j].isBomb == 1 && mat[i][j].isRevealed == 1) {
                 printcolor(30, 41);
-                printf("B ");
+                printf("X ");
             } else if (mat[i][j].isRevealed == 1) {
                 int color1 = 30;
                 int color2 = 40;
@@ -284,7 +284,7 @@ void printPlayerMat(struct celule ** mat, int size, struct coords pos) { //affic
                 printf("%d ", mat[i][j].count);
             } else if (mat[i][j].isFlagged == 1) {
                 printcolor(30, 44);
-                printf("? ");
+                printf("⚑ ");
             } else if (i == pos.x && j == pos.y) {
                     printcolor(30, 43);
                     printf("  ");
@@ -331,6 +331,7 @@ void discover(struct celule ** mat, int size, int x, int y) { //découverte des 
 }
 
 char getTerlinalKeyPress() { //detection des touches
+    //je sais plus d'où j'ai copié la source de cette fonction
     char c;
     struct termios oldattr, newattr;
     tcgetattr( STDIN_FILENO, &oldattr );
@@ -346,19 +347,19 @@ void getCusrorPosition(struct coords* pos, int* stop, int size, struct celule** 
     char c;
     c = getTerlinalKeyPress();
 
-    if (c == 'z' && pos->x > 0) {
+    if (c == 'z' && pos->x > 0) { //haut
         pos->x--;
-    } else if (c == 's' && pos->x < size-1) {
+    } else if (c == 's' && pos->x < size-1) { //bas
         pos->x++;
-    } else if (c == 'q' && pos->y > 0) {
+    } else if (c == 'q' && pos->y > 0) { //gauche
         pos->y--;
-    } else if (c == 'd' && pos->y < size-1) {
+    } else if (c == 'd' && pos->y < size-1) { //droite
         pos->y++;
-    } else if (c == 'a') {
+    } else if (c == 'a') { //demine
         discover(mat, size, pos->x, pos->y);
-    } else if (c == 'e') {
+    } else if (c == 'e') { //flag
         mat[pos->x][pos->y].isFlagged = !mat[pos->x][pos->y].isFlagged;
-    } else if (c == 'r') {
+    } else if (c == 'r') { //quit
         printf("Libération de la mémoire...\n");
         *stop = 1;
     }
@@ -437,7 +438,7 @@ int main(int argc, char const *argv[]) {
     //boucle principale
     while (stop == 0) {
         up(size+6); //on remonte le curseur pour ne pas effacer le terminal
-        printf("Contrôles:\n flèches pour se déplacer,   \na pour découvrir une case, \ne pour marquer une case,\nr pour quitter\n");
+        printf("Contrôles:\nz q s d pour se déplacer,   \na pour découvrir une case, \ne pour marquer une case,\nr pour quitter\n");
         printf("Position du curseur   x: %d, y: %d, %d Bombes   \n", pos.x, pos.y, nbBombs);
         printPlayerMat(mat, size, pos); //affichage de la matrice
         getCusrorPosition(&pos, &stop, size, mat); //recuperation de la position du curseur
