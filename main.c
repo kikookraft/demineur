@@ -376,9 +376,19 @@ int main(int argc, char const *argv[]) {
     int nbBombs = 50;
     if (argc > 1 && argc != 3) {
         printf("Utilisation : ./demineur [taille_grille] [nombre_bombes]");
+        return 1;
     } else if (argc == 3) {
         size = atoi(argv[1]);
         nbBombs = atoi(argv[2]);
+        //vérifier que les parametres sont corrects
+        if (size < 5 || size > 50) {
+            printf("La taille de la grille doit être comprise entre 5 et 50 inclus\n");
+            return 1;
+        }
+        if (nbBombs < 1 || nbBombs > size*size/2-size) {
+            printf("Le nombre de bombes doit être compris entre 1 et %d\n inclus", size*size/2-size);
+            return 1;
+        }
         printf("Jeux sur une grille de %d cases avec %d bombes\n", size, nbBombs);
     }
 
@@ -404,7 +414,30 @@ int main(int argc, char const *argv[]) {
     //découverte du début
     int x,y;
     int init_done=0;
+    int idx=0;
+    int idy=0;
+    printf("Génération de la grille...\n");
     while (init_done == 0) {
+        idx++; //pour éviter une boucle infinie
+        if (idx > 1000) {
+            sleep(1);
+            idy++;
+            //si on arrive pas à trouver une case vide, on regénère la matrice
+            freeMat(mat, size);
+            mat = initMat(size);
+            if (mat == NULL) {
+                printf("Erreur d'allocation de la matrice");
+                return 1;
+            }
+            if (idy > 5) {
+                printf("Erreur de génération de la matrice\nRelancez le programme...\n");
+                return 1;
+            }
+            setNeighbours(mat, size);
+            setBombs(mat, size, nbBombs);
+            setCount(mat, size);
+            idx = 0;
+        }
         x = rand() % size;
         y = rand() % size;
         if (mat[x][y].count != 0) {
@@ -414,11 +447,11 @@ int main(int argc, char const *argv[]) {
             init_done = 1;
         }
     }
-
+    up(1);
     //boucle principale
     while (stop == 0) {
         up(size+6); //on remonte le curseur pour ne pas effacer le terminal
-        printf("Contrôles:\nz q s d pour se déplacer,   \na pour découvrir une case, \ne pour marquer une case,\nr pour quitter\n");
+        printf("Contrôles:                                   \nz q s d pour se déplacer,   \na pour découvrir une case, \ne pour marquer une case,\nr pour quitter\n");
         printf("Position du curseur   x: %d, y: %d, %d Bombes   \n", pos.x, pos.y, nbBombs);
         printPlayerMat(mat, size, pos); //affichage de la matrice
         getCusrorPosition(&pos, &stop, size, mat); //recuperation de la position du curseur
