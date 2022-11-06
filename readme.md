@@ -4,9 +4,10 @@ Ce projet est un jeu du démineur en ligne de commande.
 ## Installation
 Pour installer le projet, il faut:
 1. Cloner le projet: `git clone https://github.com/kikookraft/demineur.git`
-2. Aller dans le dossier: `cd demineur`
-3. Compiler le projet: `gcc main.c -o demineur -lncurses`
-4. Lancer le projet: `./demineur`
+2. Installer la librairie curses avec `sudo apt install libncurses-dev`
+3. Aller dans le dossier: `cd demineur`
+4. Compiler le projet: `gcc main.c -o demineur -lncurses`
+5. Lancer le projet: `./demineur`
 
 
 ## Utilisation
